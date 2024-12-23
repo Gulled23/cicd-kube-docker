@@ -49,21 +49,23 @@ pipeline {
 
         stage('CODE ANALYSIS with SONARQUBE') {
             environment {
-                scannerHome = tool 'mysonarscanner4.6'
+                scannerHome = tool 'mysonarscanner4.6'  // Using the correct SonarQube scanner version
             }
 
             steps {
                 withSonarQubeEnv('sonar-pro') {
+                    // Updated SonarQube scanner command
                     sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
                         -Dsonar.projectName=vprofile-repo \
                         -Dsonar.projectVersion=1.0 \
                         -Dsonar.sources=src/ \
-                        -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
+                        -Dsonar.java.binaries=target/classes/ \  // Updated to target/classes/
                         -Dsonar.junit.reportsPath=target/surefire-reports/ \
                         -Dsonar.jacoco.reportsPath=target/jacoco.exec \
                         -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
                 }
 
+                // Adding timeout for the SonarQube quality gate
                 timeout(time: 10, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
