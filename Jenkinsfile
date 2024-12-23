@@ -54,9 +54,10 @@ pipeline {
 
             steps {
                 withSonarQubeEnv('sonar-pro') {
-                    echo "Running SonarQube Scanner..."
-                    // Original path reverted here
-                    sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
+                    echo "Running SonarQube Scanner with debug enabled..."
+                    // Running SonarQube scanner with the -X switch for detailed debug output
+                    sh '''${scannerHome}/bin/sonar-scanner -X \
+                        -Dsonar.projectKey=vprofile \
                         -Dsonar.projectName=vprofile-repo \
                         -Dsonar.projectVersion=1.0 \
                         -Dsonar.sources=src/ \
