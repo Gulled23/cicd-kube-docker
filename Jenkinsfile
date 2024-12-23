@@ -3,6 +3,7 @@ pipeline {
 
     tools {
         maven 'maven3'  // Maven tool version set in Global Tool Configuration
+        sonarQubeScanner 'mysonarscanner4.8'  // Make sure SonarQube Scanner is set correctly
     }
 
     environment {
@@ -49,18 +50,18 @@ pipeline {
 
         stage('CODE ANALYSIS with SONARQUBE') {
             environment {
-                scannerHome = tool 'mysonarscanner4.8'  // Using the correct SonarQube scanner version
+                scannerHome = tool 'mysonarscanner4.8'  // Reference to the correct SonarQube scanner tool
             }
 
             steps {
+                echo "SonarQube scanner path: ${scannerHome}"  // Verify scanner path
                 withSonarQubeEnv('sonar-pro') {
-                    echo "Running SonarQube Scanner..."
-                    // Original path reverted here
-                    sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
+                    sh '''${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.projectKey=vprofile \
                         -Dsonar.projectName=vprofile-repo \
                         -Dsonar.projectVersion=1.0 \
                         -Dsonar.sources=src/ \
-                        -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
+                        -Dsonar.java.binaries=target/classes \
                         -Dsonar.junit.reportsPath=target/surefire-reports/ \
                         -Dsonar.jacoco.reportsPath=target/jacoco.exec \
                         -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
@@ -105,4 +106,3 @@ pipeline {
         }
     }
 }
-
