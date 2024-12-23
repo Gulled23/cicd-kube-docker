@@ -3,12 +3,12 @@ pipeline {
 
     tools {
         maven 'maven3'  // Maven tool version set in Global Tool Configuration
-        sonarQubeScanner 'mysonarscanner4.8'  // Make sure SonarQube Scanner is set correctly
     }
 
     environment {
         registry = "gulled/batmanimg"   // Using your image name
         registryCredential = 'dockerhub' // Docker registry credentials
+        scannerHome = "/opt/sonar-scanner" // Set the correct path to your SonarQube scanner installation
     }
 
     stages {
@@ -49,19 +49,14 @@ pipeline {
         }
 
         stage('CODE ANALYSIS with SONARQUBE') {
-            environment {
-                scannerHome = tool 'mysonarscanner4.8'  // Reference to the correct SonarQube scanner tool
-            }
-
             steps {
-                echo "SonarQube scanner path: ${scannerHome}"  // Verify scanner path
                 withSonarQubeEnv('sonar-pro') {
-                    sh '''${scannerHome}/bin/sonar-scanner \
-                        -Dsonar.projectKey=vprofile \
+                    // Use the manually set `scannerHome` path
+                    sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
                         -Dsonar.projectName=vprofile-repo \
                         -Dsonar.projectVersion=1.0 \
                         -Dsonar.sources=src/ \
-                        -Dsonar.java.binaries=target/classes \
+                        -Dsonar.java.binaries=target/classes/ \  // Update the path to your class files if necessary
                         -Dsonar.junit.reportsPath=target/surefire-reports/ \
                         -Dsonar.jacoco.reportsPath=target/jacoco.exec \
                         -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
