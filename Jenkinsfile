@@ -6,70 +6,69 @@ pipeline {
     }
 
     environment {
-        registry = "gulled/batmanimg"   // Using your image name
-        registryCredential = 'dockerhub' // Docker registry credentials
+        registry = "gulled/batmanimg"             // Docker image name
+        registryCredential = 'dockerhub'         // Docker registry credentials
+        sonarHost = 'http://50.18.238.232:9000'  // SonarQube server URL
+        sonarLogin = 'sonarscanner4'             // SonarQube token for authentication
     }
 
     stages {
 
         stage('BUILD') {
             steps {
-                sh 'mvn clean install -DskipTests'
+                sh 'mvn clean install -DskipTests'  // Skip tests during build
             }
             post {
                 success {
                     echo 'Now Archiving...'
-                    archiveArtifacts artifacts: '**/target/*.war'
+                    archiveArtifacts artifacts: '**/target/*.war'  // Archive the generated WAR files
                 }
             }
         }
 
         stage('UNIT TEST') {
             steps {
-                sh 'mvn test'
+                sh 'mvn test'  // Run unit tests
             }
         }
 
         stage('INTEGRATION TEST') {
             steps {
-                sh 'mvn verify -DskipUnitTests'
+                sh 'mvn verify -DskipUnitTests'  // Run integration tests only
             }
         }
 
         stage('CODE ANALYSIS WITH CHECKSTYLE') {
             steps {
-                sh 'mvn checkstyle:checkstyle'
+                sh 'mvn checkstyle:checkstyle'  // Perform static code analysis using Checkstyle
             }
             post {
                 success {
-                    echo 'Generated Analysis Result'
+                    echo 'Generated Checkstyle Analysis Results'
                 }
             }
         }
 
         stage('CODE ANALYSIS with SONARQUBE') {
-            environment {
-                scannerHome = tool 'mysonarscanner4'  // Using the correct SonarQube scanner version
-            }
-
             steps {
-                withSonarQubeEnv('sonar-pro') {
-                    echo "Running SonarQube Scanner with debug enabled..."
-                    // Running SonarQube scanner with the -X switch for detailed debug output
-                    sh '''${scannerHome}/bin/sonar-scanner -X \
+                withSonarQubeEnv('sonar-pro') { // Use SonarQube server configuration from Jenkins
+                    sh '''
+                    mvn sonar:sonar \
                         -Dsonar.projectKey=vprofile \
+                        -Dsonar.host.url=${sonarHost} \
+                        -Dsonar.login=${sonarLogin} \
                         -Dsonar.projectName=vprofile-repo \
                         -Dsonar.projectVersion=1.0 \
                         -Dsonar.sources=src/ \
-                        -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
+                        -Dsonar.java.binaries=target/classes \
                         -Dsonar.junit.reportsPath=target/surefire-reports/ \
                         -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml \
-                        -Dsonar.scanner.javaAdditionalOpts="--add-opens java.base/java.lang=ALL-UNNAMED"'''
+                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml
+                    '''
                 }
 
                 timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                    waitForQualityGate abortPipeline: true  // Fail the pipeline if quality gate conditions are not met
                 }
             }
         }
@@ -77,7 +76,7 @@ pipeline {
         stage('Build App Image') {
             steps {
                 script {
-                    dockerImage = docker.build registry + ":V$BUILD_NUMBER"  // Builds the image with the build number
+                    dockerImage = docker.build "${registry}:V${BUILD_NUMBER}"  // Build Docker image with version tag
                 }
             }
         }
@@ -86,8 +85,8 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('', registryCredential) {
-                        dockerImage.push("V$BUILD_NUMBER")   // Pushes the image tagged with the build number
-                        dockerImage.push('latest')           // Pushes the latest tag as well
+                        dockerImage.push("V${BUILD_NUMBER}")  // Push image with version tag
+                        dockerImage.push('latest')            // Push image with 'latest' tag
                     }
                 }
             }
@@ -95,14 +94,18 @@ pipeline {
 
         stage('Remove Unused Docker Image') {
             steps {
-                sh "docker rmi $registry:V$BUILD_NUMBER"  // Cleans up the locally built image
+                sh "docker rmi ${registry}:V${BUILD_NUMBER}"  // Remove the locally built Docker image
             }
         }
 
         stage('Kubernetes Deploy') {
-            agent { label 'KOPS' }
+            agent { label 'KOPS' }  // Specify agent label for deployment
             steps {
-                sh "helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=${registry}:V${BUILD_NUMBER} --namespace prod"
+                sh '''
+                helm upgrade --install --force vprofile-stack helm/vprofilecharts \
+                    --set appimage=${registry}:V${BUILD_NUMBER} \
+                    --namespace prod
+                '''
             }
         }
     }
