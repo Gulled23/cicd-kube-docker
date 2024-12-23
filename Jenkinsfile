@@ -49,11 +49,13 @@ pipeline {
 
         stage('CODE ANALYSIS with SONARQUBE') {
             environment {
-                scannerHome = tool 'mysonarscanner4'
+                scannerHome = tool 'mysonarscanner4.6'  // Using the correct SonarQube scanner version
             }
 
             steps {
                 withSonarQubeEnv('sonar-pro') {
+                    echo "Running SonarQube Scanner..."
+                    // Original path reverted here
                     sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
                         -Dsonar.projectName=vprofile-repo \
                         -Dsonar.projectVersion=1.0 \
