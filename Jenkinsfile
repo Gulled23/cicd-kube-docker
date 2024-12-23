@@ -1,19 +1,18 @@
 pipeline {
-
     agent any
-/*
-	tools {
-        maven 'maven3'
+
+    tools {
+        maven 'maven3'  // Maven tool version set in Global Tool Configuration
     }
-*/
+
     environment {
-        registry = "kubeimran/vproappdock"
-        registryCredential = 'dockerhub'
+        registry = "gulled/batmanimg"   // Using your image name
+        registryCredential = 'dockerhub' // Docker registry credentials
     }
 
-    stages{
+    stages {
 
-        stage('BUILD'){
+        stage('BUILD') {
             steps {
                 sh 'mvn clean install -DskipTests'
             }
@@ -25,19 +24,19 @@ pipeline {
             }
         }
 
-        stage('UNIT TEST'){
+        stage('UNIT TEST') {
             steps {
                 sh 'mvn test'
             }
         }
 
-        stage('INTEGRATION TEST'){
+        stage('INTEGRATION TEST') {
             steps {
                 sh 'mvn verify -DskipUnitTests'
             }
         }
 
-        stage ('CODE ANALYSIS WITH CHECKSTYLE'){
+        stage('CODE ANALYSIS WITH CHECKSTYLE') {
             steps {
                 sh 'mvn checkstyle:checkstyle'
             }
@@ -49,7 +48,6 @@ pipeline {
         }
 
         stage('CODE ANALYSIS with SONARQUBE') {
-
             environment {
                 scannerHome = tool 'mysonarscanner4'
             }
@@ -57,13 +55,13 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonar-pro') {
                     sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
-                   -Dsonar.projectName=vprofile-repo \
-                   -Dsonar.projectVersion=1.0 \
-                   -Dsonar.sources=src/ \
-                   -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
-                   -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                   -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                   -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
+                        -Dsonar.projectName=vprofile-repo \
+                        -Dsonar.projectVersion=1.0 \
+                        -Dsonar.sources=src/ \
+                        -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
+                        -Dsonar.junit.reportsPath=target/surefire-reports/ \
+                        -Dsonar.jacoco.reportsPath=target/jacoco.exec \
+                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
                 }
 
                 timeout(time: 10, unit: 'MINUTES') {
@@ -73,37 +71,35 @@ pipeline {
         }
 
         stage('Build App Image') {
-          steps {
-            script {
-              dockerImage = docker.build registry + ":V$BUILD_NUMBER"
+            steps {
+                script {
+                    dockerImage = docker.build registry + ":V$BUILD_NUMBER"  // Builds the image with the build number
+                }
             }
-          }
         }
 
-        stage('Upload Image'){
-          steps{
-            script {
-              docker.withRegistry('', registryCredential) {
-                dockerImage.push("V$BUILD_NUMBER")
-                dockerImage.push('latest')
-              }
+        stage('Upload Image') {
+            steps {
+                script {
+                    docker.withRegistry('', registryCredential) {
+                        dockerImage.push("V$BUILD_NUMBER")   // Pushes the image tagged with the build number
+                        dockerImage.push('latest')           // Pushes the latest tag as well
+                    }
+                }
             }
-          }
         }
 
-        stage('Remove Unused docker image') {
-          steps{
-            sh "docker rmi $registry:V$BUILD_NUMBER"
-          }
+        stage('Remove Unused Docker Image') {
+            steps {
+                sh "docker rmi $registry:V$BUILD_NUMBER"  // Cleans up the locally built image
+            }
         }
 
         stage('Kubernetes Deploy') {
-          agent {label 'KOPS'}
+            agent { label 'KOPS' }
             steps {
-              sh "helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=${registry}:V${BUILD_NUMBER} --namespace prod"
+                sh "helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=${registry}:V${BUILD_NUMBER} --namespace prod"
             }
         }
     }
-
-
 }
