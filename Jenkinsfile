@@ -54,18 +54,29 @@ pipeline {
 
             steps {
                 withSonarQubeEnv('sonar-pro') {
-                    // Updated SonarQube scanner command
-                    sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
-                        -Dsonar.projectName=vprofile-repo \
-                        -Dsonar.projectVersion=1.0 \
-                        -Dsonar.sources=src/ \
-                        -Dsonar.java.binaries=target/classes/ \  // Updated to target/classes/
-                        -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                        -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
+                    echo "Running SonarQube Scanner..."
+                    // Updated SonarQube scanner command with debugging
+                    sh '''echo "Scanner home: ${scannerHome}"
+                         echo "Running SonarQube Scanner with the following command:"
+                         echo "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
+                         -Dsonar.projectName=vprofile-repo \
+                         -Dsonar.projectVersion=1.0 \
+                         -Dsonar.sources=src/ \
+                         -Dsonar.java.binaries=target/classes/ \  // Updated to target/classes/
+                         -Dsonar.junit.reportsPath=target/surefire-reports/ \
+                         -Dsonar.jacoco.reportsPath=target/jacoco.exec \
+                         -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml"
+                         
+                         ${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
+                         -Dsonar.projectName=vprofile-repo \
+                         -Dsonar.projectVersion=1.0 \
+                         -Dsonar.sources=src/ \
+                         -Dsonar.java.binaries=target/classes/ \
+                         -Dsonar.junit.reportsPath=target/surefire-reports/ \
+                         -Dsonar.jacoco.reportsPath=target/jacoco.exec \
+                         -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
                 }
 
-                // Adding timeout for the SonarQube quality gate
                 timeout(time: 10, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
