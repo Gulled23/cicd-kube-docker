@@ -8,7 +8,7 @@ pipeline {
     environment {
         registry = "gulled/batmanimg"             // Docker image name
         registryCredential = 'dockerhub'         // Docker registry credentials
-        sonarHost = 'http://50.18.238.232:9000'  // SonarQube server URL
+        sonarHost = 'http://50.18.100.255:9000'  // SonarQube server URL
         sonarLogin = 'sonarscanner4'             // SonarQube token for authentication
     }
 
